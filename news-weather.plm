@@ -61,6 +61,18 @@ scene NewsWeather {
     fact slot_sw = 0                                  // the size of the monitor the panel is on: the scene has a copy on each (`screens: each`, numbered in its own order) and only the copy of that size draws (0: not told yet, every copy does)
     fact slot_sh = 0
     let shown = if(slot_open and (slot_sw == 0 or (screen.width == slot_sw and screen.height == slot_sh)), 1, 0)
+    spring ax_drip = 170, 18                          // the shell's `drip`: what its add-on drawer opens with
+    prop ax_k = 0 ~ax_drip
+    follow ax_k = shown
+    let ax_lf = min(1, ax_k * 1.6) + max(0, ax_k - 1) * 0.6         // the drawer's own growth (`dax.lf` in vitreus.plm)
+    //  The jelly: the glass bounces by its liquid shape (a blob with a neck that morphs to a panel), which flat content cannot copy, so the content
+    //  squashes and stretches instead. A bouncier spring runs beside the glass's; how far it is ahead or behind is the jiggle: wider and shorter as it
+    //  lands (~3 %), taller on the rebound (~1.5 %), settled by ~700 ms: small enough to stay inside the glass. Being a difference of the two, it keeps time with the glass.
+    spring ax_bounce = 260, 11
+    prop ax_j = 0 ~ax_bounce
+    follow ax_j = shown
+    let ax_sx = max(0.02, ax_lf * (1 + 0.07 * (ax_j - ax_k)))
+    let ax_sy = max(0.02, ax_lf * (1 - 0.045 * (ax_j - ax_k)))
 
     spring slide = 220, 24                            // the tab thumb: quick, with a hint of overshoot
 
@@ -141,7 +153,13 @@ scene NewsWeather {
     let nsf = news_fsz
 
     group {
-        show: shown > 0.5
+        //  It comes out with the shell's glass: the same spring as the drawer (the shell's `drip`, underdamped: the jelly) and the same growth
+        //  (`lf`, full size early, then the overshoot) with the jelly above, scaled about the panel's corner nearest the screen's, where the add-on
+        //  pill is and the glass grows from. On the way back it goes at once, since the glass is already shrinking when the shell tells it.
+        show: shown > 0.5 and ax_k > 0.01
+        pivot: if(slot_x > screen.width / 2, slot_x + slot_w / 2, slot_x - slot_w / 2), if(slot_y > screen.height / 2, slot_y + slot_h / 2, slot_y - slot_h / 2)
+        scale: ax_sx, ax_sy
+        opacity: clamp(ax_k * 2.2 - 0.1, 0, 1)
         group {
             move: slot_x - ns.w / 2, slot_y - ns.h / 2
             //  ── the tabs: one track, a thumb that slides to the one in use ──
