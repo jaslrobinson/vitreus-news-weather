@@ -394,6 +394,10 @@ scene NewsWeather {
                 let wx.d0 = wx.wy + wx.wh + 64 * u        // the first day's row
                 let wx.rx = 220 * u                       // where the days' range bars start, and how long they are
                 let wx.rw = max(40 * u, ns.w - 66 * u - wx.rx)
+                //  The graph's hover zones, cut to the part of the list that is in view (in the list's own coordinates: `wxp_scr` down to `wxp_scr + wx.v`).
+                //  A list clips what it draws, not its zones: scrolled, they rose above it over the tabs, the buttons and the panel's X, and took their clicks.
+                let wx.zt = max(wx.y0 - 10 * u, wxp_scr)
+                let wx.zb = min(wx.wy + wx.wh + 12 * u, wxp_scr + wx.v)
                 //  (put away while a place is being looked up: a list that scrolls is a zone of its own, and it took the clicks meant for the place field, which are the shell's)
                 column wxs { at: 0, 100 * u; view: ns.w, wx.v; show: not wxp_adding
                     group {
@@ -415,7 +419,7 @@ scene NewsWeather {
                             box { from: wx.x0, wx.y0 + k * wx.th / 2; size: ns.w - 44 * u, 1; color: ink; opacity: 7% }
                         }
                         text "WIND & UV" { at: 22 * u, wx.wy - 20 * u; anchor: left center; size: 11 * nsf; weight: 700; color: nsk3; family: "Space Grotesk" }
-                        zone box wxg_z { from: wx.x0 - 6 * u, wx.y0 - 10 * u; size: ns.w - 32 * u, wx.wy + wx.wh + 22 * u - wx.y0; active: news_tab == 1 and not wxp_adding }
+                        zone box wxg_z { from: wx.x0 - 6 * u, wx.zt; size: ns.w - 32 * u, max(1, wx.zb - wx.zt); active: news_tab == 1 and not wxp_adding and wx.zb - wx.zt > 1 }
                         for h in wxh {
                             let hx = wx.x0 + h.index * wx.cw
                             box { from: hx - 0.5, wx.y0 - 4 * u; size: 1, wx.wy + wx.wh + 20 * u - wx.y0; color: ink; opacity: if(h.day > 0.5, 16%, 0%) }
@@ -427,7 +431,7 @@ scene NewsWeather {
                             line { from: hx, wx.wy + wx.wh * (1 - h.w); to: hx + wx.cw, wx.wy + wx.wh * (1 - h.w2); width: 2 * u; color: mint; opacity: if(h.index < 47, 85%, 0%) }
                             box { from: hx - wx.cw * 0.3, wx.wy + wx.wh + 18 * u - 14 * u * h.uv; size: wx.cw * 0.6, max(0.5, 14 * u * h.uv); corner: 1 * u; color: mix(minthi, alert, h.uv); opacity: if(h.uv > 0.01, 85%, 0%) }
                             //  the hour under the pointer: a line, a dot on the temperature, and what it holds above the graph
-                            zone box wxh_z { from: hx - wx.cw / 2, wx.y0 - 10 * u; size: wx.cw, wx.wy + wx.wh + 22 * u - wx.y0; active: news_tab == 1 and not wxp_adding and wxp_scr < wx.wy }
+                            zone box wxh_z { from: hx - wx.cw / 2, wx.zt; size: wx.cw, max(1, wx.zb - wx.zt); active: news_tab == 1 and not wxp_adding and wx.zb - wx.zt > 1 }
                             on enter wxh_z { wxp_hov = h.index }
                             box { from: hx - 0.75, wx.y0; size: 1.5, wx.th + 46 * u; color: ink; opacity: if(wxp_hov == h.index and wxg_z.hover > 0.5, 40%, 0%) }
                             ellipse { at: hx, wx.y0 + wx.th * (1 - h.t); radius: 3.5 * u; color: mint; opacity: if(wxp_hov == h.index and wxg_z.hover > 0.5, 100%, 0%) }
