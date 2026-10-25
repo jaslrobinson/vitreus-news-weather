@@ -220,18 +220,70 @@ local function have_feed(url)
     for _, f in ipairs(cfg.feeds) do if f.url == url then return true end end
     return false
 end
+-- ════════════════════════════════ the field ════════════════════════════════
+-- One field at a time, the feed manager's or the place search's, typed through the shell: this says where it is (from the top left of the content, in the scene's
+-- `u` of 1.1; `axf_r` from the right edge, which leaves Paste out of it) and the shell sends back `field_q`, `field_kb`, `field_enter` and `field_esc`.
+local U = 1.1
+local field = nil              -- "feed", "place" or nil: which one is shown
+local last_q = nil             -- the writing last acted on
+local function say_shell(cmds)
+    local args = { "--say", "vitreus" }
+    for _, c in ipairs(cmds) do args[#args + 1] = c end
+    run("pleamar", args, function() end)
+end
+local function place_field()
+    local l, t, r = 22, 110, 108
+    if field == "place" then l, t, r = 30, 97, 112 end
+    say_shell({ "fact axf_l " .. l * U, "fact axf_t " .. t * U, "fact axf_r " .. r * U, "fact axf_h " .. 34 * U, "text axf_q " .. (text.field_q or ""), "fact axf_on true", "emit axf_set" })       -- (`axf_set`: already on, from the other field, it would keep that one's writing)
+end
+local function set_field_text(v)       -- the add-on's own change of what is written (emptied after adding, the clipboard's)
+    text.field_q = v
+    last_q = v
+    say_shell({ "text axf_q " .. v, "emit axf_set" })
+end
+local publish_dir_now
+local function update_field()          -- which field the panel shows now; after any change of the tab, the manager or the place search
+    local want = nil
+    if fact.news_tab == 0 and fact.news_mng == true then want = "feed"
+    elseif fact.news_tab == 1 and fact.wxp_adding == true then want = "place" end
+    if want == field then return end
+    field = want
+    text.field_q = ""
+    last_q = ""
+    if field then place_field() else say_shell({ "fact axf_on false" }) end
+    if publish_dir_now then publish_dir_now() end
+end
+-- The shell forgets the field when the panel shuts: told again as it comes out (with what was written, which it then keeps).
+local was_open = false
+on("fact:slot_open", function(v)       -- (said again every two seconds while the panel is out: only its coming out counts, or the field would be set back to a moment ago)
+    local now = v == true
+    if now == was_open then return end
+    was_open = now
+    if now and field then place_field() end
+end)
+on("fact:news_tab", function() update_field() end)
+
 local sugg_items = {}
-publish_dir = function()       -- the popular feeds that are not in yet
+publish_dir = function()       -- the popular feeds that are not in yet; with something written in the field, the ones that match it (and the writing itself, to look up)
     sugg_items = {}
     local rows = {}
+    local q = field == "feed" and trim(text.field_q) or ""
+    local ql = q:lower()
+    fact.news_qon = q ~= ""
+    if q ~= "" and (q:find("://", 1, true) or (q:find(".", 1, true) and not q:find(" ", 1, true)) or q:match("^r/")) then
+        sugg_items[1] = { name = "Add “" .. q .. "”", resolve = q }
+        rows[1] = { name = sugg_items[1].name, sub = "find its feed" }
+    end
     for _, d in ipairs(directory) do
-        if not have_feed(d.url) and #sugg_items < 30 then
+        local hit = ql == "" or d.name:lower():find(ql, 1, true) or (d.topic or ""):lower():find(ql, 1, true) or d.url:lower():find(ql, 1, true)
+        if hit and not have_feed(d.url) and #sugg_items < 30 then
             sugg_items[#sugg_items + 1] = d
             rows[#rows + 1] = { name = d.name, sub = (d.topic or "") .. " · " .. host_of(d.url) }
         end
     end
     model.news_sugg = rows
 end
+publish_dir_now = function() publish_dir() end
 publish_myfeeds = function()
     local rows = {}
     for i, f in ipairs(cfg.feeds) do
@@ -246,6 +298,7 @@ local function apply_feed(name, url)
     cfg.feeds[#cfg.feeds + 1] = { name = name, url = url }
     save_cfg()
     publish_myfeeds()
+    if field == "feed" then set_field_text("") end
     publish_dir()
     say("added " .. name)
     fetch_now()
@@ -274,10 +327,11 @@ on("news_paste", function()
         resolve_and_add(q)
     end)
 end)
-on("news_mng_pick", function(i)
-    local d = sugg_items[math.floor((tonumber(i) or -1) + 0.5) + 1]
-    if d then apply_feed(d.name, d.url) end
-end)
+local function pick_feed(d)
+    if not d then return end
+    if d.resolve then resolve_and_add(d.resolve) else apply_feed(d.name, d.url) end
+end
+on("news_mng_pick", function(i) pick_feed(sugg_items[math.floor((tonumber(i) or -1) + 0.5) + 1]) end)
 on("news_mng_del", function(i)
     local k = math.floor((tonumber(i) or -1) + 0.5) + 1
     local f = cfg.feeds[k]
@@ -294,7 +348,9 @@ on("news_mng_del", function(i)
     fetch_now()
 end)
 on("fact:news_mng", function(v)
-    if v then say("") publish_myfeeds() publish_dir() end
+    if v then say("") publish_myfeeds() end
+    update_field()
+    publish_dir()
 end)
 on("news_font", function(d)
     cfg.font = math.max(0.85, math.min(1.25, math.floor((cfg.font + (tonumber(d) or 0) * 0.05) * 100 + 0.5) / 100))
@@ -555,27 +611,32 @@ on("nw_units_set", function(i)
     refresh_weather()
 end)
 
--- adding a place, from the clipboard: Open-Meteo's geocoding gives several per name (with region and country), and one is picked
+-- adding a place: the field looks it up as it is written (or the clipboard's, with Paste); Open-Meteo's geocoding gives several per name (with region and
+-- country), and one is picked (Enter: the first)
 local found = {}
-local function close_adding()
-    fact.wxp_adding = false
+local look_token = 0
+local function clear_adding()       -- what the search held (not the fact itself: its own handler calls this)
+    look_token = look_token + 1
     found = {}
     model.wxp_sugg = {}
     text.wxp_msg = ""
-    text.wxp_q = ""
 end
-on("wxp_plus", function()
-    if fact.wxp_adding == true then close_adding() return end
-    run("wl-paste", { "--no-newline" }, function(out, code)
-        local q = trim((out or ""):sub(1, 80))
-        fact.wxp_adding = true
-        found = {}
-        model.wxp_sugg = {}
-        text.wxp_q = ""
-        if code ~= 0 or q == "" or q:find("[\r\n]") then text.wxp_msg = "Copy a place's name first (like “Salt Lake City”), then press + again" return end
-        text.wxp_q = q
+local function close_adding()
+    fact.wxp_adding = false       -- (set here, it does not fire its own handler)
+    clear_adding()
+    update_field()
+end
+local function look(q)
+    look_token = look_token + 1
+    local tok = look_token
+    found = {}
+    if #q < 2 then model.wxp_sugg = {} text.wxp_msg = "" return end
+    after(350, function()       -- once the writing has paused
+        if tok ~= look_token then return end
         text.wxp_msg = "looking it up…"
         run("curl", { "-s", "-L", "--max-time", "8", "https://geocoding-api.open-meteo.com/v1/search?name=" .. urlenc(q) .. "&count=6&format=json" }, function(o2, c2)
+            if tok ~= look_token then return end
+            found = {}
             local ok, res = pcall(json.decode, o2 or "")
             local rows = {}
             if c2 == 0 and ok and type(res) == "table" then
@@ -592,9 +653,20 @@ on("wxp_plus", function()
             text.wxp_msg = #rows == 0 and "no place by that name" or ""
         end)
     end)
+end
+on("wxp_paste", function()
+    run("wl-paste", { "--no-newline" }, function(out, code)
+        local q = trim((out or ""):sub(1, 80))
+        if code ~= 0 or q == "" or q:find("[\r\n]") then text.wxp_msg = "nothing to paste: copy a place's name first" return end
+        if field == "place" then set_field_text(q) end
+        look(q)
+    end)
 end)
-on("wxp_add", function(i)
-    local p = found[math.floor((tonumber(i) or -1) + 0.5) + 1]
+on("fact:wxp_adding", function(v)
+    if v ~= true then clear_adding() end
+    update_field()
+end)
+local function add_place(p)
     if not p then return end
     local have = false
     for _, q in ipairs(wcfg.places) do if same(q, p) then have = true end end
@@ -604,6 +676,33 @@ on("wxp_add", function(i)
     close_adding()
     publish_places()
     refresh_weather()
+end
+on("wxp_add", function(i) add_place(found[math.floor((tonumber(i) or -1) + 0.5) + 1]) end)
+
+-- what the shell sends from the field
+on("text:field_q", function()
+    local q = text.field_q or ""
+    if q == last_q then return end       -- (sent again with Enter: looking up the same words afresh dropped the places found, which Enter takes the first of)
+    last_q = q
+    if field == "feed" then publish_dir() elseif field == "place" then look(trim(q)) end
+end)
+on("field_enter", function()
+    if field == "feed" then
+        local q = trim(text.field_q)
+        if q == "" then return end
+        if sugg_items[1] then pick_feed(sugg_items[1]) else resolve_and_add(q) end
+    elseif field == "place" then
+        add_place(found[1])
+    end
+end)
+on("field_esc", function()
+    if field == "feed" then
+        fact.news_mng = false       -- (set here, it does not fire its own handler)
+        update_field()
+        publish_dir()
+    elseif field == "place" then
+        close_adding()
+    end
 end)
 
 -- an open drawer with an old forecast asks for a new one

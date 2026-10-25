@@ -6,15 +6,16 @@ import "addon-palette.plm"
 //  drawing are jaslrobinson's (Vitreus issue #22), moved from the shell onto the add-on system: this scene draws below the shell's title bar, in the
 //  rectangle Vitreus gives it (`slot_*`), and news-weather.luau does the fetching with `vitreus-feedfetch` and `curl`.
 //
-//  What an add-on cannot do yet, and what stands in for it: no keyboard, so feeds and places are added from the clipboard (copy an address, `r/subreddit`
-//  or a place's name, then press the button) and the feed manager lists popular feeds to pick from; one monitor; no notch to carry an unread dot.
+//  Feeds and places are typed, in fields the shell takes the keys for (this scene never asks for the keyboard: see `axf_on` in Vitreus): the feed manager's
+//  field narrows the popular feeds as it is written and finds the feed of an address or `r/subreddit`, the place field looks places up; Paste beside each
+//  takes the clipboard. One monitor; no notch to carry an unread dot.
 
 scene NewsWeather {
-    surface { size: full, full; anchor: top_left; margin: 0; level: top; screens: each max 4 }
+    surface { size: full, full; anchor: top_left; margin: 0; level: top, overlay while slot_open; screens: each max 4 }
 
     permissions {
         services: "files", "files.write"
-        run: "vitreus-feedfetch", "curl", "wl-paste", "cat", "xdg-open"
+        run: "vitreus-feedfetch", "curl", "wl-paste", "cat", "xdg-open", "pleamar"
     }
 
     fact pal_ink_r = 0.9608
@@ -70,6 +71,13 @@ scene NewsWeather {
     fact news_unread = 0
     fact news_filter = 0
     fact news_mng = false
+    //  The field, typed through the shell (news-weather.luau tells it where; one at a time: the feed manager's or the place search's)
+    text field_q = ""                                 // what is written
+    fact field_kb = false                             // it is being typed in
+    event field_enter ->
+    event field_esc ->
+    measure nfq                                       // how wide the writing is, for the caret
+    fact news_qon = false                             // something is written in the feed field: the list under it is the matches, not the popular feeds
     fact news_mng_busy = false
     fact news_scr = 0
     fact news_dscr = 0
@@ -113,7 +121,6 @@ scene NewsWeather {
     text wxp_tmin = ""
     text wxp_hilo = ""
     text wxp_sun = ""
-    text wxp_q = ""
     text wxp_msg = ""
     model wxh max 48 { t: number; t2: number; f: number; f2: number; p: number; a: number; w: number; w2: number; g: number; uv: number; day: number; lbl: text; tip: text }
     model wxd max 16 { lbl: text; k: number; pop: text; popn: number; lo: number; hi: number; lot: text; hit: text }
@@ -122,7 +129,7 @@ scene NewsWeather {
     event wxp_pick ->
     event wxp_del ->
     event wxp_add ->
-    event wxp_plus ->
+    event wxp_paste ->                                // the clipboard into the place field
     event nw_units_set ->                             // 0 Fahrenheit, 1 Celsius
 
     let u = 1.1
@@ -246,12 +253,17 @@ scene NewsWeather {
                 //  address, the feeds that are in (each with its cross), and the writing's size ──
                 group {
                     show: news_mng
-                    //  adding a feed (no field here: an add-on cannot take the keyboard): the address on the clipboard, or one of the popular ones below
-                    zone box news_paste_z { from: 22 * u, 110 * u; size: ns.w - 44 * u, 34 * u; corner: 17 * u; cursor: pointer; active: not news_mng_busy; label: "Add the feed address on the clipboard" }
+                    //  adding a feed: the field (a known feed's name, a site's address, r/subreddit; Enter takes the first row below) and Paste, the address on the
+                    //  clipboard. No zone over the field itself (up to Paste): a click there is the shell's, which takes the keys for it.
+                    box { from: 22 * u, 110 * u; size: ns.w - 44 * u, 34 * u; corner: 17 * u; color: ink; opacity: 9% + 5% * if(field_kb, 1, 0) }
+                    text "search feeds, an address, r/subreddit…" { at: 38 * u, 127 * u; anchor: left center; size: 12.5 * nsf; weight: 500; width: ns.w - 160 * u; lines: 1; color: nsk3; family: "Space Grotesk"; show: nfq.width < 1 }
+                    text field_q { at: 38 * u, 127 * u; anchor: left center; size: 12.5 * nsf; weight: 600; color: nsk1; family: "Space Grotesk"; measure: nfq }
+                    box { at: 39 * u + nfq.width, 127 * u; size: 1.6 * u, 16 * u; color: mint; show: field_kb }
+                    zone box news_paste_z { from: ns.w - 104 * u, 114 * u; size: 78 * u, 26 * u; corner: 13 * u; cursor: pointer; active: not news_mng_busy; label: "Add the feed address on the clipboard" }
                     on press news_paste_z { emit news_paste }
-                    box { from: 22 * u, 110 * u; size: ns.w - 44 * u, 34 * u; corner: 17 * u; color: mint; opacity: 14% + 18% * news_paste_z.hover }
-                    text "Add the address on the clipboard" { at: ns.w / 2, 127 * u; anchor: center center; size: 12.5 * nsf; weight: 700; color: nsk1; family: "Space Grotesk"; show: not news_mng_busy }
-                    text "checking…" { at: ns.w / 2, 127 * u; anchor: center center; size: 12.5 * nsf; weight: 700; color: nsk1; family: "Space Grotesk"; show: news_mng_busy }
+                    box { from: ns.w - 104 * u, 114 * u; size: 78 * u, 26 * u; corner: 13 * u; color: mint; opacity: 14% + 18% * news_paste_z.hover }
+                    text "Paste" { at: ns.w - 65 * u, 127 * u; anchor: center center; size: 11.5 * nsf; weight: 700; color: nsk1; family: "Space Grotesk"; show: not news_mng_busy }
+                    text "…" { at: ns.w - 65 * u, 127 * u; anchor: center center; size: 11.5 * nsf; weight: 700; color: nsk1; family: "Space Grotesk"; show: news_mng_busy }
                     text "YOUR FEEDS" { at: 22 * u, 162 * u; anchor: left center; size: 11 * nsf; weight: 700; color: nsk3; family: "Space Grotesk" }
                     text news_mng_msg { at: ns.w - 22 * u, 162 * u; anchor: right center; size: 11 * nsf; weight: 600; width: 260 * u; lines: 1; align: right; color: nsk2; family: "Space Grotesk" }
                     for f in news_feeds {
@@ -286,7 +298,8 @@ scene NewsWeather {
                     let nsd.v = ns.h - 70 * u - nsd.y
                     group {
                         show: nsd.v > 60 * u and news_sugg.count > 0
-                        text "POPULAR FEEDS" { at: 22 * u, nsd.y - 14 * u; anchor: left center; size: 11 * nsf; weight: 700; color: nsk3; family: "Space Grotesk" }
+                        text "POPULAR FEEDS" { at: 22 * u, nsd.y - 14 * u; anchor: left center; size: 11 * nsf; weight: 700; color: nsk3; family: "Space Grotesk"; show: not news_qon }
+                        text "MATCHES" { at: 22 * u, nsd.y - 14 * u; anchor: left center; size: 11 * nsf; weight: 700; color: nsk3; family: "Space Grotesk"; show: news_qon }
                         column news_dir { at: 14 * u, nsd.y; view: ns.w - 28 * u, nsd.v; gap: 2 * u
                             for s in news_sugg {
                                 group {
@@ -335,8 +348,8 @@ scene NewsWeather {
                     }
                     group {
                         size: 26 * u, 26 * u
-                        zone box wxp_plus_z { from: 0, 0; size: 26 * u, 26 * u; corner: 13 * u; cursor: pointer; label: "Add the place on the clipboard" }
-                        on press wxp_plus_z { emit wxp_plus }
+                        zone box wxp_plus_z { from: 0, 0; size: 26 * u, 26 * u; corner: 13 * u; cursor: pointer; label: "Add a place" }
+                        on press wxp_plus_z { toggle wxp_adding }
                         ellipse { at: 13 * u, 13 * u; radius: 13 * u; color: if(wxp_adding, mint, ink); opacity: if(wxp_adding, 90%, 8% + 8% * wxp_plus_z.hover) }
                         box { at: 13 * u, 13 * u; size: 10 * u, 1.8 * u; corner: 0.9 * u; color: if(wxp_adding, onmint, nsk1) }
                         box { at: 13 * u, 13 * u; size: 1.8 * u, 10 * u; corner: 0.9 * u; color: if(wxp_adding, onmint, nsk1); opacity: if(wxp_adding, 0%, 100%) }
@@ -363,7 +376,8 @@ scene NewsWeather {
                 let wx.d0 = wx.wy + wx.wh + 64 * u        // the first day's row
                 let wx.rx = 220 * u                       // where the days' range bars start, and how long they are
                 let wx.rw = max(40 * u, ns.w - 66 * u - wx.rx)
-                column wxs { at: 0, 100 * u; view: ns.w, wx.v
+                //  (put away while a place is being looked up: a list that scrolls is a zone of its own, and it took the clicks meant for the place field, which are the shell's)
+                column wxs { at: 0, 100 * u; view: ns.w, wx.v; show: not wxp_adding
                     group {
                         size: ns.w, wx.d0 + 16 * 32 * u + 16 * u
                         //  now
@@ -430,8 +444,15 @@ scene NewsWeather {
                     body { color: mix(tint, deep, 0.55); opacity: 97%; shadow: 0, 6 * u, 16 * u, 40%, deep
                         box { from: 22 * u, 96 * u; size: ns.w - 44 * u, 50 * u + max(1, wxp_sugg.count) * 34 * u; corner: 12 * u }
                     }
-                    text "from the clipboard" { at: 44 * u, 114 * u; anchor: left center; size: 11 * nsf; weight: 700; color: nsk3; family: "Space Grotesk" }
-                    text wxp_q { at: ns.w - 44 * u, 114 * u; anchor: right center; size: 12 * nsf; weight: 600; width: ns.w - 220 * u; lines: 1; align: right; color: nsk1; family: "Space Grotesk" }
+                    //  the place field (no zone over it, up to Paste: the shell takes the keys for it), looked up as it is written
+                    box { from: 30 * u, 97 * u; size: ns.w - 60 * u, 34 * u; corner: 17 * u; color: ink; opacity: 9% + 5% * if(field_kb, 1, 0) }
+                    text "look up a place…" { at: 44 * u, 114 * u; anchor: left center; size: 12.5 * nsf; weight: 500; width: ns.w - 170 * u; lines: 1; color: nsk3; family: "Space Grotesk"; show: nfq.width < 1 }
+                    text field_q { at: 44 * u, 114 * u; anchor: left center; size: 12.5 * nsf; weight: 600; color: nsk1; family: "Space Grotesk"; measure: nfq }
+                    box { at: 45 * u + nfq.width, 114 * u; size: 1.6 * u, 16 * u; color: mint; show: field_kb }
+                    zone box wxp_paste_z { from: ns.w - 108 * u, 101 * u; size: 74 * u, 26 * u; corner: 13 * u; cursor: pointer; label: "Look up the place on the clipboard" }
+                    on press wxp_paste_z { emit wxp_paste }
+                    box { from: ns.w - 108 * u, 101 * u; size: 74 * u, 26 * u; corner: 13 * u; color: mint; opacity: 14% + 18% * wxp_paste_z.hover }
+                    text "Paste" { at: ns.w - 71 * u, 114 * u; anchor: center center; size: 11.5 * nsf; weight: 700; color: nsk1; family: "Space Grotesk" }
                     text wxp_msg { at: ns.w / 2, 162 * u; anchor: center center; size: 11.5 * nsf; weight: 600; width: ns.w - 90 * u; lines: 2; align: center; color: nsk2; family: "Space Grotesk"; show: wxp_sugg.count == 0 }
                     for s in wxp_sugg {
                         let wsy = 134 * u + s.index * 34 * u
