@@ -63,14 +63,14 @@ scene NewsWeather {
     let shown = if(slot_open and (slot_sw == 0 or (screen.width == slot_sw and screen.height == slot_sh)), 1, 0)
     spring ax_drip = 170, 18                          // the shell's `drip`: what its add-on drawer opens with
     prop ax_k = 0 ~ax_drip
-    follow ax_k = shown
+    follow ax_k = if(slot_open, 1, 0)                 // (not `shown`: a follow runs on every copy, and the last copy's value won, so with two monitors the content never came out)
     let ax_lf = min(1, ax_k * 1.6) + max(0, ax_k - 1) * 0.6         // the drawer's own growth (`dax.lf` in vitreus.plm)
     //  The jelly: the glass bounces by its liquid shape (a blob with a neck that morphs to a panel), which flat content cannot copy, so the content
     //  squashes and stretches instead. A bouncier spring runs beside the glass's; how far it is ahead or behind is the jiggle: wider and shorter as it
     //  lands (~3 %), taller on the rebound (~1.5 %), settled by ~700 ms: small enough to stay inside the glass. Being a difference of the two, it keeps time with the glass.
     spring ax_bounce = 260, 11
     prop ax_j = 0 ~ax_bounce
-    follow ax_j = shown
+    follow ax_j = if(slot_open, 1, 0)
     let ax_sx = max(0.02, ax_lf * (1 + 0.07 * (ax_j - ax_k)))
     let ax_sy = max(0.02, ax_lf * (1 - 0.045 * (ax_j - ax_k)))
 
