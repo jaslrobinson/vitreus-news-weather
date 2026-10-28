@@ -2,8 +2,9 @@
 
 A [Vitreus](https://github.com/natepayn3/Vitreus) add-on: an RSS reader and a forecast in one drawer out of the add-on pill, drawn in the shell's own boiled pencil.
 
-![News](screenshots/news.png)
-![Weather](screenshots/weather.png)
+![News](screenshots/news.jpg)
+![Weather](screenshots/weather.jpg)
+![The feed manager](screenshots/feeds.jpg)
 
 ## What it does
 
