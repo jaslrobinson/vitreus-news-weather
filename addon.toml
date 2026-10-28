@@ -1,11 +1,13 @@
-# News & Weather, an add-on with a panel (see addons/_template_drawer). Copy this folder to ~/.config/pleamar/vitreus-addons/news-weather/ and turn it on in Settings > Add-ons.
-# It reads its feeds through `vitreus-feedfetch` (bin/, linked into ~/.local/bin by install.sh) and the forecast through `curl`; both are named in the scene's `permissions`.
-# The design and the first version are jaslrobinson's (Vitreus issue #22).
+# News & Weather, an add-on with a panel (see Vitreus's addons/_template_drawer). Copy this folder to ~/.config/pleamar/vitreus-addons/news-weather/ and turn it on in
+# Settings > Add-ons. It reads its feeds through Vitreus's `vitreus-feedfetch` (linked into ~/.local/bin by Vitreus's install.sh) and the forecast through `curl`;
+# both are named in the scene's `permissions`. The design and the first version are jaslrobinson's (Vitreus issue #22); natepayn3 moved it onto the add-on system.
 
 name        = "News & Weather"
 description = "RSS reader and a 48-hour, 16-day forecast, in one drawer"
 author      = "jaslrobinson"
-version     = "0.1"
+version     = "0.2"
+vitreus_api = 1
+repo        = "jaslrobinson/vitreus-news-weather"
 scene       = "news-weather.plm"
 icon        = "icon.svg"
 
