@@ -195,7 +195,7 @@ scene NewsWeather {
                 group {
                     let ngf = if(news_mng or news_gear_z.hover > 0.5, fr, 0)
                     repeat k in 0..6 {
-                        GLn(ns.w - 79 * u, 72 * u, 5.8 * cos(k * 1.0472), 5.8 * sin(k * 1.0472), 8.6 * cos(k * 1.0472), 8.6 * sin(k * 1.0472), 410 + k, gz, if(news_mng, onmint, mix(nsk1, mint, news_gear_z.hover)), 1, ngf)
+                        GLn(ns.w - 79 * u, 72 * u, 5.8 * cos(k * 60), 5.8 * sin(k * 60), 8.6 * cos(k * 60), 8.6 * sin(k * 60), 410 + k, gz, if(news_mng, onmint, mix(nsk1, mint, news_gear_z.hover)), 1, ngf)
                     }
                     GArc(ns.w - 79 * u, 72 * u, 0, 0, 5.2, 0, 360, 417, gz, if(news_mng, onmint, mix(nsk1, mint, news_gear_z.hover)), 1, ngf)
                     ellipse { at: ns.w - 79 * u, 72 * u; radius: 1.4 * u; color: if(news_mng, onmint, mix(nsk1, mint, news_gear_z.hover)) }
