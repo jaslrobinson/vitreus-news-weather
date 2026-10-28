@@ -1,5 +1,6 @@
 language 0.1
 import "addon-palette.plm"
+import "addon-theme.plm"                          // the theme's own pieces (PThumb: see STYLE.md, "Themes")
 
 //  The News & Weather drawer, as an add-on: a panel out of the add-on pill with two tabs. News is an RSS/Atom reader (source chips, thumbnails, read and
 //  unread, a feed manager); Weather is an Open-Meteo forecast with 48 hours of graphs, 16 days as range bars and saved places. The design and most of the
@@ -160,12 +161,7 @@ scene NewsWeather {
                 let nst.w = (ns.w - 44 * u) / 2
                 let nst.str = clamp(abs(news_tab - news_tsel), 0, 2)     // the thumb stretches on its way, as the Desk's does
                 box { at: ns.w / 2, 30 * u; size: ns.w - 44 * u, 34 * u; corner: 17 * u; color: ink; opacity: 10% }
-                body {
-                    color: mint
-                    shadow: 0, 0, 10 * u, 40%, mint
-                    rim: 16%
-                    box { at: 22 * u + nst.w * (news_tsel + 0.5), 30 * u; size: (nst.w - 8 * u) + 10 * u * nst.str, 26 * u - 3 * u * clamp(nst.str, 0, 1); corner: 13 * u }
-                }
+                PThumb(x: 22 * u + nst.w * (news_tsel + 0.5), y: 30 * u, w: (nst.w - 8 * u) + 10 * u * nst.str, h: 26 * u - 3 * u * clamp(nst.str, 0, 1), rad: 13 * u, th: 34 * u, a: 1)
                 repeat i in 0..2 {
                     let nst.x = 22 * u + nst.w * (i + 0.5)
                     let nst.on = clamp(1 - abs(news_tsel - i), 0, 1)
