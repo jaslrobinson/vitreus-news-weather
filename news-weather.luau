@@ -2,7 +2,7 @@
 -- Open-Meteo forecast fetched with `curl` (current conditions, 48 hours, 16 days), saved places by their coordinates (weather.json). Both are kept in this scene's own
 -- data folder (~/.local/share/pleamar/news-weather), which the files service reads and writes by name.
 -- Based on jaslrobinson's news drawer (Vitreus issue #22): news.luau and weather_plus.luau there, moved off the shell's own code and onto the add-on system. Differences:
--- no keyboard here, so a feed or a place is added from the clipboard (`wl-paste`), and the manager lists popular feeds to pick from instead of searching as you type.
+-- feeds and places are typed in fields the shell takes the keys for (Ctrl+V pastes there), and the manager narrows the popular feeds as a feed is typed.
 --
 -- news.json: feeds { "name": "XDA", "url": "https://…/feed/" } (RSS or Atom; a feed may carry its own "block"), block (words that keep an item out: its title, address or
 -- category, any case), minutes (15), max_items (40), per_feed (12), thumbnails (true), font (0.85 to 1.25). It is read again before each fetch.
@@ -222,7 +222,7 @@ local function have_feed(url)
 end
 -- ════════════════════════════════ the field ════════════════════════════════
 -- One field at a time, the feed manager's or the place search's, typed through the shell: this says where it is (from the top left of the content, in the scene's
--- `u` of 1.1; `axf_r` from the right edge, which leaves Paste out of it) and the shell sends back `field_q`, `field_kb`, `field_enter` and `field_esc`.
+-- `u` of 1.1; `axf_r` from the right edge) and the shell sends back `field_q`, `field_kb`, `field_enter` and `field_esc` (Ctrl+V pastes, in the shell).
 local U = 1.1
 local field = nil              -- "feed", "place" or nil: which one is shown
 local last_q = nil             -- the writing last acted on
@@ -232,8 +232,8 @@ local function say_shell(cmds)
     run("pleamar", args, function() end)
 end
 local function place_field()
-    local l, t, r = 22, 110, 108
-    if field == "place" then l, t, r = 30, 97, 112 end
+    local l, t, r = 22, 110, 50                    -- (the right end leaves room for the "…" shown while a feed is looked up)
+    if field == "place" then l, t, r = 30, 97, 30 end
     say_shell({ "fact axf_l " .. l * U, "fact axf_t " .. t * U, "fact axf_r " .. r * U, "fact axf_h " .. 34 * U, "text axf_q " .. (text.field_q or ""), "fact axf_on true", "emit axf_set" })       -- (`axf_set`: already on, from the other field, it would keep that one's writing)
 end
 local function set_field_text(v)       -- the add-on's own change of what is written (emptied after adding, the clipboard's)
@@ -320,13 +320,6 @@ local function resolve_and_add(q)
         end
     end)
 end
-on("news_paste", function()
-    run("wl-paste", { "--no-newline" }, function(out, code)
-        local q = trim((out or ""):sub(1, 300))
-        if code ~= 0 or q == "" or q:find("[\r\n]") then say("copy a site address or r/subreddit first") return end
-        resolve_and_add(q)
-    end)
-end)
 local function pick_feed(d)
     if not d then return end
     if d.resolve then resolve_and_add(d.resolve) else apply_feed(d.name, d.url) end
@@ -611,7 +604,7 @@ on("nw_units_set", function(i)
     refresh_weather()
 end)
 
--- adding a place: the field looks it up as it is written (or the clipboard's, with Paste); Open-Meteo's geocoding gives several per name (with region and
+-- adding a place: the field looks it up as it is written; Open-Meteo's geocoding gives several per name (with region and
 -- country), and one is picked (Enter: the first)
 local found = {}
 local look_token = 0
@@ -654,14 +647,6 @@ local function look(q)
         end)
     end)
 end
-on("wxp_paste", function()
-    run("wl-paste", { "--no-newline" }, function(out, code)
-        local q = trim((out or ""):sub(1, 80))
-        if code ~= 0 or q == "" or q:find("[\r\n]") then text.wxp_msg = "nothing to paste: copy a place's name first" return end
-        if field == "place" then set_field_text(q) end
-        look(q)
-    end)
-end)
 on("fact:wxp_adding", function(v)
     if v ~= true then clear_adding() end
     update_field()

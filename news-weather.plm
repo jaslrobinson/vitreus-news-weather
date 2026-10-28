@@ -1,6 +1,8 @@
 language 0.1
 import "addon-palette.plm"
 import "addon-theme.plm"                          // the theme's own pieces (PThumb: see STYLE.md, "Themes")
+import "addon-pencil.plm"                         // the shell's pencil: PRound and the rest (STYLE.md)
+import "pencil-glyphs.plm"                        // the shell's icons in pencil (GWeather, GRetry, GClose…): a copy of Vitreus's own
 
 //  The News & Weather drawer, as an add-on: a panel out of the add-on pill with two tabs. News is an RSS/Atom reader (source chips, thumbnails, read and
 //  unread, a feed manager); Weather is an Open-Meteo forecast with 48 hours of graphs, 16 days as range bars and saved places. The design and most of the
@@ -8,15 +10,16 @@ import "addon-theme.plm"                          // the theme's own pieces (PTh
 //  rectangle Vitreus gives it (`slot_*`), and news-weather.luau does the fetching with `vitreus-feedfetch` and `curl`.
 //
 //  Feeds and places are typed, in fields the shell takes the keys for (this scene never asks for the keyboard: see `axf_on` in Vitreus): the feed manager's
-//  field narrows the popular feeds as it is written and finds the feed of an address or `r/subreddit`, the place field looks places up; Paste beside each
-//  takes the clipboard. One monitor; no notch to carry an unread dot.
+//  field narrows the popular feeds as it is written and finds the feed of an address or `r/subreddit`, the place field looks places up (Ctrl+V pastes into
+//  either, as in every field the shell types). Drawn in the shell's pencil (addon-pencil.plm, pencil-glyphs.plm): a piece rests unless it is in use or under
+//  the pointer, and holds still on Proxy. One monitor; no notch to carry an unread dot.
 
 scene NewsWeather {
     surface { size: full, full; anchor: top_left; margin: 0; level: top, overlay while slot_open; screens: each max 4 }
 
     permissions {
         services: "files", "files.write"
-        run: "vitreus-feedfetch", "curl", "wl-paste", "cat", "xdg-open", "pleamar"
+        run: "vitreus-feedfetch", "curl", "cat", "xdg-open", "pleamar"
     }
 
     fact pal_ink_r = 0.9608
@@ -107,7 +110,6 @@ scene NewsWeather {
     event news_chip ->
     event news_refresh ->
     event news_read_all ->
-    event news_paste ->
     event news_mng_pick ->
     event news_mng_del ->
     event news_font ->
@@ -139,10 +141,11 @@ scene NewsWeather {
     event wxp_pick ->
     event wxp_del ->
     event wxp_add ->
-    event wxp_paste ->                                // the clipboard into the place field
     event nw_units_set ->                             // 0 Fahrenheit, 1 Celsius
 
     let u = 1.1
+    let fr = if(shown > 0.5 and look != 5, floor(time * 8), 0)     // the pencil's redrawing (STYLE.md): still while shut, and on Proxy, whose HUD is crisp
+    let gz = u                                        // pencil-glyphs.plm's icons are drawn on a 24-unit square: one unit is `gz` pixels
     let ns.w = max(slot_w, 1)
     let ns.h = max(slot_h, 1)
     let nsk1 = ink
@@ -184,19 +187,17 @@ scene NewsWeather {
                 group {
                     pivot: ns.w - 37 * u, 72 * u
                     rotate: if(news_loading, mod(news_spin * 260, 360), 0) * 1deg
-                    arc { at: ns.w - 37 * u, 72 * u; radius: 8.5 * u; span: 285deg; width: 2.2 * u; color: mix(nsk1, mint, if(news_loading, 1, news_rf_z.hover)); rotate: 0deg }
-                    path { at: ns.w - 37 * u + 8.5 * u, 72 * u - 2 * u; color: mix(nsk1, mint, if(news_loading, 1, news_rf_z.hover)); move 0, -4 * u; line 4 * u, 2 * u; line -2.5 * u, 2.5 * u; close }
+                    GRetry(ns.w - 37 * u, 72 * u, 0.9 * gz, mix(nsk1, mint, if(news_loading, 1, news_rf_z.hover)), 1, if(news_loading or news_rf_z.hover > 0.5, fr, 0))
                 }
                 zone box news_rf_z { at: ns.w - 37 * u, 72 * u; size: 34 * u, 34 * u; corner: 17 * u; cursor: pointer; active: not news_mng; label: "Refresh the news" }
                 on press news_rf_z { emit news_refresh }
                 ellipse { at: ns.w - 79 * u, 72 * u; radius: 16 * u; color: if(news_mng, mint, ink); opacity: if(news_mng, 90%, 8% + 10% * news_gear_z.hover) }
                 group {
+                    let ngf = if(news_mng or news_gear_z.hover > 0.5, fr, 0)
                     repeat k in 0..6 {
-                        group { pivot: ns.w - 79 * u, 72 * u; rotate: (k * 60) * 1deg
-                            box { at: ns.w - 79 * u, 72 * u - 7.5 * u; size: 2.6 * u, 3.6 * u; corner: 1 * u; color: if(news_mng, onmint, mix(nsk1, mint, news_gear_z.hover)) }
-                        }
+                        GLn(ns.w - 79 * u, 72 * u, 5.8 * cos(k * 1.0472), 5.8 * sin(k * 1.0472), 8.6 * cos(k * 1.0472), 8.6 * sin(k * 1.0472), 410 + k, gz, if(news_mng, onmint, mix(nsk1, mint, news_gear_z.hover)), 1, ngf)
                     }
-                    ellipse { at: ns.w - 79 * u, 72 * u; radius: 5.6 * u; stroke: 2.2 * u; color: if(news_mng, onmint, mix(nsk1, mint, news_gear_z.hover)) }
+                    GArc(ns.w - 79 * u, 72 * u, 0, 0, 5.2, 0, 360, 417, gz, if(news_mng, onmint, mix(nsk1, mint, news_gear_z.hover)), 1, ngf)
                     ellipse { at: ns.w - 79 * u, 72 * u; radius: 1.4 * u; color: if(news_mng, onmint, mix(nsk1, mint, news_gear_z.hover)) }
                 }
                 zone box news_gear_z { at: ns.w - 79 * u, 72 * u; size: 34 * u, 34 * u; corner: 17 * u; cursor: pointer; label: "Feed settings" }
@@ -212,8 +213,8 @@ scene NewsWeather {
                             size: nsc.w, 26 * u
                             zone box news_chip_z { from: 0, 0; size: nsc.w, 26 * u; corner: 13 * u; cursor: pointer; label: "Only {c.name}" }
                             on press news_chip_z { emit news_chip(c.index) }
-                            box { from: 0, 0; size: nsc.w, 26 * u; corner: 13 * u; color: mint; opacity: if(news_filter == c.index, 1, 0%) }
                             box { from: 0, 0; size: nsc.w, 26 * u; corner: 13 * u; color: ink; opacity: if(news_filter == c.index, 0%, 8% + 8% * news_chip_z.hover) }
+                            PThumb(x: nsc.w / 2, y: 13 * u, w: nsc.w, h: 26 * u, rad: 13 * u, th: 26 * u, a: if(news_filter == c.index, 1, 0))
                             text c.name { at: nsc.w / 2, 13 * u; anchor: center center; size: 11.5 * nsf; weight: 700; width: nsc.w - 14 * u; lines: 1; align: center; color: if(news_filter == c.index, onmint, nsk1); family: "Space Grotesk" }
                         }
                     }
@@ -230,6 +231,7 @@ scene NewsWeather {
                             on press news_row_z { emit news_open(r.index) }
                             on press right news_row_z { emit news_read(r.index) }
                             box { from: 0, 0; size: nsr.w, 66 * u; corner: 12 * u; color: ink; opacity: 6% * news_row_z.hover }
+                            PRound(x: 2.6 * u, y: 2.6 * u, w: nsr.w - 5.2 * u, h: 66 * u - 5.2 * u, r: 10 * u, s: 600, wd: 1.4 * u, c: ink, a: 0.5 * news_row_z.hover, f: if(news_row_z.hover > 0.5, fr, 0))
                             ellipse { at: 5 * u, 33 * u; radius: 2.6 * u; color: mint; opacity: if(r.read > 0.5, 0%, 100%) }
                             measure nstm
                             measure nsmm
@@ -264,17 +266,13 @@ scene NewsWeather {
                 //  address, the feeds that are in (each with its cross), and the writing's size ──
                 group {
                     show: news_mng
-                    //  adding a feed: the field (a known feed's name, a site's address, r/subreddit; Enter takes the first row below) and Paste, the address on the
-                    //  clipboard. No zone over the field itself (up to Paste): a click there is the shell's, which takes the keys for it.
+                    //  adding a feed: the field (a known feed's name, a site's address, r/subreddit; Enter takes the first row below; Ctrl+V pastes). No zone
+                    //  over the field itself: a click there is the shell's, which takes the keys for it.
                     box { from: 22 * u, 110 * u; size: ns.w - 44 * u, 34 * u; corner: 17 * u; color: ink; opacity: 9% + 5% * if(field_kb, 1, 0) }
-                    text "search feeds, an address, r/subreddit…" { at: 38 * u, 127 * u; anchor: left center; size: 12.5 * nsf; weight: 500; width: ns.w - 160 * u; lines: 1; color: nsk3; family: "Space Grotesk"; show: nfq.width < 1 }
+                    text "search feeds, an address, r/subreddit…" { at: 38 * u, 127 * u; anchor: left center; size: 12.5 * nsf; weight: 500; width: ns.w - 90 * u; lines: 1; color: nsk3; family: "Space Grotesk"; show: nfq.width < 1 }
                     text field_q { at: 38 * u, 127 * u; anchor: left center; size: 12.5 * nsf; weight: 600; color: nsk1; family: "Space Grotesk"; measure: nfq }
                     box { at: 39 * u + nfq.width, 127 * u; size: 1.6 * u, 16 * u; color: mint; show: field_kb }
-                    zone box news_paste_z { from: ns.w - 104 * u, 114 * u; size: 78 * u, 26 * u; corner: 13 * u; cursor: pointer; active: not news_mng_busy; label: "Add the feed address on the clipboard" }
-                    on press news_paste_z { emit news_paste }
-                    box { from: ns.w - 104 * u, 114 * u; size: 78 * u, 26 * u; corner: 13 * u; color: mint; opacity: 14% + 18% * news_paste_z.hover }
-                    text "Paste" { at: ns.w - 65 * u, 127 * u; anchor: center center; size: 11.5 * nsf; weight: 700; color: nsk1; family: "Space Grotesk"; show: not news_mng_busy }
-                    text "…" { at: ns.w - 65 * u, 127 * u; anchor: center center; size: 11.5 * nsf; weight: 700; color: nsk1; family: "Space Grotesk"; show: news_mng_busy }
+                    text "…" { at: ns.w - 40 * u, 127 * u; anchor: center center; size: 11.5 * nsf; weight: 700; color: nsk1; family: "Space Grotesk"; show: news_mng_busy }
                     text "YOUR FEEDS" { at: 22 * u, 162 * u; anchor: left center; size: 11 * nsf; weight: 700; color: nsk3; family: "Space Grotesk" }
                     text news_mng_msg { at: ns.w - 22 * u, 162 * u; anchor: right center; size: 11 * nsf; weight: 600; width: 260 * u; lines: 1; align: right; color: nsk2; family: "Space Grotesk" }
                     for f in news_feeds {
@@ -287,8 +285,7 @@ scene NewsWeather {
                             text f.name { at: 34 * u, nsfy + 13 * u; anchor: left center; size: 12.5 * nsf; weight: 600; width: ns.w / 2 - 44 * u; lines: 1; color: nsk1; family: "Space Grotesk" }
                             text f.sub { at: ns.w - 56 * u, nsfy + 13 * u; anchor: right center; size: 10.5 * nsf; weight: 500; width: ns.w / 2 - 60 * u; lines: 1; align: right; color: nsk2; family: "Space Grotesk" }
                             ellipse { at: ns.w - 34 * u, nsfy + 13 * u; radius: 9 * u; color: alert; opacity: 15% + 55% * news_feedx_z.hover }
-                            path { at: ns.w - 34 * u, nsfy + 13 * u; stroke: 1.8 * u; color: if(news_feedx_z.hover > 0.5, onmint, alert); move -3 * u, -3 * u; line 3 * u, 3 * u }
-                            path { at: ns.w - 34 * u, nsfy + 13 * u; stroke: 1.8 * u; color: if(news_feedx_z.hover > 0.5, onmint, alert); move 3 * u, -3 * u; line -3 * u, 3 * u }
+                            GClose(ns.w - 34 * u, nsfy + 13 * u, 0.5 * gz, if(news_feedx_z.hover > 0.5, onmint, alert), 1, if(news_feedx_z.hover > 0.5, fr, 0))
                         }
                     }
                     text "no feeds yet — add one below" { at: ns.w / 2, 220 * u; anchor: center center; size: 12 * nsf; weight: 500; color: nsk2; family: "Space Grotesk"; show: news_feeds.count == 0 }
@@ -341,8 +338,8 @@ scene NewsWeather {
                         size: wxc.w, 26 * u
                         zone box wxp_follow_z { from: 0, 0; size: wxc.w, 26 * u; corner: 13 * u; cursor: pointer; label: "Follow me" }
                         on press wxp_follow_z { emit wxp_pick(-1) }
-                        box { from: 0, 0; size: wxc.w, 26 * u; corner: 13 * u; color: mint; opacity: if(wxp_sel < 0, 1, 0%) }
                         box { from: 0, 0; size: wxc.w, 26 * u; corner: 13 * u; color: ink; opacity: if(wxp_sel < 0, 0%, 8% + 8% * wxp_follow_z.hover) }
+                        PThumb(x: wxc.w / 2, y: 13 * u, w: wxc.w, h: 26 * u, rad: 13 * u, th: 26 * u, a: if(wxp_sel < 0, 1, 0))
                         text "Follow me" { at: wxc.w / 2, 13 * u; anchor: center center; size: 11.5 * nsf; weight: 700; width: wxc.w - 12 * u; lines: 1; align: center; color: if(wxp_sel < 0, onmint, nsk1); family: "Space Grotesk" }
                     }
                     for p in wxp_places {
@@ -350,13 +347,12 @@ scene NewsWeather {
                             size: wxc.w, 26 * u
                             zone box wxp_pl_z { from: 0, 0; size: wxc.w, 26 * u; corner: 13 * u; cursor: pointer; label: "{p.name}" }
                             on press wxp_pl_z { emit wxp_pick(p.index) }
-                            box { from: 0, 0; size: wxc.w, 26 * u; corner: 13 * u; color: mint; opacity: if(wxp_sel == p.index, 1, 0%) }
                             box { from: 0, 0; size: wxc.w, 26 * u; corner: 13 * u; color: ink; opacity: if(wxp_sel == p.index, 0%, 8% + 8% * wxp_pl_z.hover) }
+                            PThumb(x: wxc.w / 2, y: 13 * u, w: wxc.w, h: 26 * u, rad: 13 * u, th: 26 * u, a: if(wxp_sel == p.index, 1, 0))
                             text p.name { at: 12 * u, 13 * u; anchor: left center; size: 11.5 * nsf; weight: 700; width: wxc.w - 36 * u; lines: 1; color: if(wxp_sel == p.index, onmint, nsk1); family: "Space Grotesk" }
                             zone box wxp_x_z { from: wxc.w - 24 * u, 2 * u; size: 22 * u, 22 * u; corner: 11 * u; cursor: pointer; label: "Remove {p.name}" }
                             on press wxp_x_z { emit wxp_del(p.index) }
-                            path { at: wxc.w - 13 * u, 13 * u; stroke: 1.6 * u; color: if(wxp_sel == p.index, onmint, nsk1); opacity: 35% + 60% * wxp_x_z.hover; move -3 * u, -3 * u; line 3 * u, 3 * u }
-                            path { at: wxc.w - 13 * u, 13 * u; stroke: 1.6 * u; color: if(wxp_sel == p.index, onmint, nsk1); opacity: 35% + 60% * wxp_x_z.hover; move 3 * u, -3 * u; line -3 * u, 3 * u }
+                            GClose(wxc.w - 13 * u, 13 * u, 0.5 * gz, if(wxp_sel == p.index, onmint, nsk1), 0.35 + 0.6 * wxp_x_z.hover, if(wxp_x_z.hover > 0.5, fr, 0))
                         }
                     }
                     group {
@@ -364,14 +360,14 @@ scene NewsWeather {
                         zone box wxp_plus_z { from: 0, 0; size: 26 * u, 26 * u; corner: 13 * u; cursor: pointer; label: "Add a place" }
                         on press wxp_plus_z { toggle wxp_adding }
                         ellipse { at: 13 * u, 13 * u; radius: 13 * u; color: if(wxp_adding, mint, ink); opacity: if(wxp_adding, 90%, 8% + 8% * wxp_plus_z.hover) }
-                        box { at: 13 * u, 13 * u; size: 10 * u, 1.8 * u; corner: 0.9 * u; color: if(wxp_adding, onmint, nsk1) }
-                        box { at: 13 * u, 13 * u; size: 1.8 * u, 10 * u; corner: 0.9 * u; color: if(wxp_adding, onmint, nsk1); opacity: if(wxp_adding, 0%, 100%) }
+                        GLn(13 * u, 13 * u, -5, 0, 5, 0, 430, gz, if(wxp_adding, onmint, nsk1), 1, if(wxp_adding or wxp_plus_z.hover > 0.5, fr, 0))
+                        GLn(13 * u, 13 * u, 0, -5, 0, 5, 431, gz, if(wxp_adding, onmint, nsk1), if(wxp_adding, 0, 1), if(wxp_plus_z.hover > 0.5, fr, 0))
                     }
                 }
 
                 //  °F | °C, at the row's right end
                 box { from: ns.w - 22 * u - 76 * u, 60 * u; size: 76 * u, 26 * u; corner: 13 * u; color: ink; opacity: 8% }
-                box { from: ns.w - 22 * u - 76 * u + if(nw_c, 38 * u, 0) + 2 * u, 62 * u; size: 34 * u, 22 * u; corner: 11 * u; color: mint }
+                PThumb(x: ns.w - 22 * u - 57 * u + if(nw_c, 38 * u, 0), y: 73 * u, w: 34 * u, h: 22 * u, rad: 11 * u, th: 26 * u, a: 1)
                 repeat i in 0..2 {
                     text pick(i, "°F", "°C") { at: ns.w - 22 * u - 57 * u + i * 38 * u, 73 * u; anchor: center center; size: 11.5 * nsf; weight: 700; color: if(if(nw_c, 1, 0) == i, onmint, nsk1); family: "Space Grotesk" }
                     zone box wxu_z.$i { at: ns.w - 22 * u - 57 * u + i * 38 * u, 73 * u; size: 38 * u, 26 * u; cursor: pointer; label: pick(i, "Fahrenheit", "Celsius") }
@@ -398,7 +394,7 @@ scene NewsWeather {
                     group {
                         size: ns.w, wx.d0 + 16 * 32 * u + 16 * u
                         //  now
-                        text pick(nw_kind, "󰖙", "󰖕", "󰖐", "󰖑", "󰖗", "󰖘", "󰖓") { at: 22 * u, 40 * u; anchor: left center; size: 44 * nsf; family: "SpaceMono Nerd Font Propo"; color: mint }
+                        GWeather(43 * u, 40 * u, nw_kind, 1.75 * nsf * gz, mint, 1, 0)
                         text nw_temp { at: 86 * u, 40 * u; anchor: left center; size: 40 * nsf; weight: 700; color: nsk1; family: "Space Grotesk" }
                         text nw_desc { at: 22 * u, 84 * u; anchor: left center; size: 14 * nsf; weight: 600; width: ns.w / 2 - 30 * u; lines: 1; color: nsk2; family: "Space Grotesk" }
                         text "Feels {nw_feels}  ·  Humidity {nw_hum}" { at: ns.w - 22 * u, 18 * u; anchor: right center; size: 11.5 * nsf; weight: 600; width: ns.w / 2; lines: 1; align: right; color: nsk2; family: "Space Grotesk" }
@@ -439,7 +435,7 @@ scene NewsWeather {
                             let dy = wx.d0 + d.index * 32 * u
                             box { from: 14 * u, dy - 15 * u; size: ns.w - 28 * u, 30 * u; corner: 8 * u; color: ink; opacity: if(mod(d.index, 2) == 0, 4%, 0%) }
                             text d.lbl { at: 22 * u, dy; anchor: left center; size: 12.5 * nsf; weight: 600; width: 76 * u; lines: 1; color: nsk1; family: "Space Grotesk" }
-                            text pick(d.k, "󰖙", "󰖕", "󰖐", "󰖑", "󰖗", "󰖘", "󰖓") { at: 104 * u, dy; anchor: left center; size: 18 * nsf; family: "SpaceMono Nerd Font Propo"; color: mint }
+                            GWeather(113 * u, dy, d.k, 0.75 * nsf * gz, mint, 1, 0)
                             text d.pop { at: 136 * u, dy; anchor: left center; size: 11 * nsf; weight: 600; color: nsk2; opacity: 45% + 55% * d.popn; family: "Space Grotesk" }
                             text d.lot { at: wx.rx - 8 * u, dy; anchor: right center; size: 11 * nsf; weight: 600; color: nsk2; family: "Space Grotesk" }
                             box { from: wx.rx, dy - 3 * u; size: wx.rw, 6 * u; corner: 3 * u; color: ink; opacity: 8% }
@@ -461,15 +457,11 @@ scene NewsWeather {
                     body { color: mix(tint, deep, 0.55); opacity: 97%; shadow: 0, 6 * u, 16 * u, 40%, deep
                         box { from: 22 * u, 96 * u; size: ns.w - 44 * u, 50 * u + max(1, wxp_sugg.count) * 34 * u; corner: 12 * u }
                     }
-                    //  the place field (no zone over it, up to Paste: the shell takes the keys for it), looked up as it is written
+                    //  the place field (no zone over it: the shell takes the keys for it; Ctrl+V pastes), looked up as it is written
                     box { from: 30 * u, 97 * u; size: ns.w - 60 * u, 34 * u; corner: 17 * u; color: ink; opacity: 9% + 5% * if(field_kb, 1, 0) }
-                    text "look up a place…" { at: 44 * u, 114 * u; anchor: left center; size: 12.5 * nsf; weight: 500; width: ns.w - 170 * u; lines: 1; color: nsk3; family: "Space Grotesk"; show: nfq.width < 1 }
+                    text "look up a place…" { at: 44 * u, 114 * u; anchor: left center; size: 12.5 * nsf; weight: 500; width: ns.w - 90 * u; lines: 1; color: nsk3; family: "Space Grotesk"; show: nfq.width < 1 }
                     text field_q { at: 44 * u, 114 * u; anchor: left center; size: 12.5 * nsf; weight: 600; color: nsk1; family: "Space Grotesk"; measure: nfq }
                     box { at: 45 * u + nfq.width, 114 * u; size: 1.6 * u, 16 * u; color: mint; show: field_kb }
-                    zone box wxp_paste_z { from: ns.w - 108 * u, 101 * u; size: 74 * u, 26 * u; corner: 13 * u; cursor: pointer; label: "Look up the place on the clipboard" }
-                    on press wxp_paste_z { emit wxp_paste }
-                    box { from: ns.w - 108 * u, 101 * u; size: 74 * u, 26 * u; corner: 13 * u; color: mint; opacity: 14% + 18% * wxp_paste_z.hover }
-                    text "Paste" { at: ns.w - 71 * u, 114 * u; anchor: center center; size: 11.5 * nsf; weight: 700; color: nsk1; family: "Space Grotesk" }
                     text wxp_msg { at: ns.w / 2, 162 * u; anchor: center center; size: 11.5 * nsf; weight: 600; width: ns.w - 90 * u; lines: 2; align: center; color: nsk2; family: "Space Grotesk"; show: wxp_sugg.count == 0 }
                     for s in wxp_sugg {
                         let wsy = 134 * u + s.index * 34 * u

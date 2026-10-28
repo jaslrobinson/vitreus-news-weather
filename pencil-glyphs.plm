@@ -1,0 +1,356 @@
+language 0.1
+
+//  The shell's icons in pencil, for any scene to import (the lock screen, the volume drawer, an add-on): no icon font. Each one sits on a 24-unit square
+//  about (cx, cy), `z` pixels to a unit (a 20 px icon is z = 20 / 24), in colour `c` at opacity `o`. Its lines are drawn as the shell's pencil is: twice,
+//  the second a hair off and fainter, wobbling a little on `f` (the frame: floor(time * 8) to boil, 0 to rest still crooked). The shell's rule holds:
+//  an icon rests unless it is on or under the pointer. It reads nothing of the scene's own, so it fits anywhere.
+
+library PencilGlyphs {
+    //  ── the pencil ──
+    //  A stroke from (ax, ay) to (bx, by), in units about (cx, cy). `s` is its seed, so no two wobble together.
+    component GLn(cx: number, cy: number, ax: number, ay: number, bx: number, by: number, s: number, z: number, c: color, o: number, f: number) {
+        let j = 0.35 * max(z, 0.6)
+        let wd = max(1.1, 1.7 * z)
+        line { from: cx + ax * z + j * sin(f * 61 + s * 50), cy + ay * z + j * sin(f * 67 + s * 30); to: cx + bx * z + j * sin(f * 53 + s * 70), cy + by * z + j * sin(f * 59 + s * 90); width: wd; color: c; opacity: o }
+        line { from: cx + ax * z + 1.6 * j + j * sin(f * 47 + s * 70), cy + ay * z - j + j * sin(f * 43 + s * 110); to: cx + bx * z + 0.9 * j + j * sin(f * 41 + s * 30), cy + by * z + 1.2 * j + j * sin(f * 37 + s * 50); width: wd * 0.65; color: c; opacity: o * 0.3 }
+    }
+    //  An arc about (ax, ay) in units, radius `r`, from angle `a0` to `a1` (degrees, 0 to the right, 90 down), in twelve strokes (six showed corners on a big one); the faint pass a little inside.
+    component GArc(cx: number, cy: number, ax: number, ay: number, r: number, a0: number, a1: number, s: number, z: number, c: color, o: number, f: number) {
+        let wd = max(1.1, 1.7 * z)
+        repeat k in 0..12 {
+            let p0 = a0 + (a1 - a0) * k / 12
+            let p1 = a0 + (a1 - a0) * (k + 1) / 12
+            let r0 = r * z * (1 + 0.05 * sin(f * 53 + k * 97 + s * 40))
+            let r1 = r * z * (1 + 0.05 * sin(f * 53 + (k + 1) * 97 + s * 40))
+            line { from: cx + ax * z + r0 * cos(p0), cy + ay * z + r0 * sin(p0); to: cx + ax * z + r1 * cos(p1), cy + ay * z + r1 * sin(p1); width: wd; color: c; opacity: o }
+        }
+        repeat k in 0..8 {
+            let q0 = a0 + 8 + (a1 - a0 - 16) * k / 8
+            let q1 = a0 + 8 + (a1 - a0 - 16) * (k + 1) / 8
+            let rr = r * z * 0.9
+            line { from: cx + ax * z + 0.5 * z + rr * cos(q0), cy + ay * z - 0.3 * z + rr * sin(q0); to: cx + ax * z + 0.5 * z + rr * cos(q1), cy + ay * z - 0.3 * z + rr * sin(q1); width: wd * 0.65; color: c; opacity: o * 0.3 }
+        }
+    }
+    //  A box's outline, its corners from (x0, y0) to (x1, y1) in units.
+    component GBox(cx: number, cy: number, x0: number, y0: number, x1: number, y1: number, s: number, z: number, c: color, o: number, f: number) {
+        GLn(cx, cy, x0, y0, x1, y0, s, z, c, o, f)
+        GLn(cx, cy, x1, y0, x1, y1, s + 1, z, c, o, f)
+        GLn(cx, cy, x1, y1, x0, y1, s + 2, z, c, o, f)
+        GLn(cx, cy, x0, y1, x0, y0, s + 3, z, c, o, f)
+    }
+
+    //  ── the icons ──
+    //  A padlock, shut.
+    component GLock(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GBox(cx, cy, -7, -1, 7, 10, 11, z, c, o, f)
+        GArc(cx, cy, 0, -4, 5, 180, 360, 15, z, c, o, f)
+        GLn(cx, cy, -5, -4, -5, -1, 16, z, c, o, f)
+        GLn(cx, cy, 5, -4, 5, -1, 17, z, c, o, f)
+        GLn(cx, cy, 0, 3, 0, 6, 18, z, c, o, f)
+    }
+    //  A padlock, open: the shackle lifted off its right side.
+    component GLockOpen(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GBox(cx, cy, -7, -1, 7, 10, 21, z, c, o, f)
+        GArc(cx, cy, 0, -7, 5, 180, 360, 25, z, c, o, f)
+        GLn(cx, cy, -5, -7, -5, -1, 26, z, c, o, f)
+        GLn(cx, cy, 5, -7, 5, -4, 27, z, c, o, f)
+        GLn(cx, cy, 0, 3, 0, 6, 28, z, c, o, f)
+    }
+    //  An arrow round in a circle: try again (`restart_alt` too).
+    component GRetry(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GArc(cx, cy, 0, 1, 8, 300, 570, 31, z, c, o, f)
+        GLn(cx, cy, 4, -6, -1, -10, 32, z, c, o, f)
+        GLn(cx, cy, 4, -6, -1, -2, 33, z, c, o, f)
+    }
+    //  A person: a head and shoulders.
+    component GPerson(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GArc(cx, cy, 0, -4, 4, 0, 360, 41, z, c, o, f)
+        GArc(cx, cy, 0, 11, 8, 200, 340, 42, z, c, o, f)
+    }
+    //  A battery on its side, pencilled in as far as `lv` (0 to 1).
+    component GBattery(cx: number, cy: number, lv: number, z: number, c: color, o: number, f: number) {
+        GBox(cx, cy, -10, -5, 8, 5, 51, z, c, o, f)
+        GLn(cx, cy, 10, -2, 10, 2, 55, z, c, o, f)
+        repeat i in 0..6 {
+            let x = -7.6 + i * 2.6
+            GLn(cx, cy, x + 0.6, -2.8, x - 0.6, 2.8, 56 + i, z, c, if(x < -9 + 17 * clamp(lv, 0, 1), o * 0.7, 0), f)
+        }
+    }
+    //  A lightning bolt (charging).
+    component GBolt(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GLn(cx, cy, 2, -9, -4, 1, 61, z, c, o, f)
+        GLn(cx, cy, -4, 1, 2, 1, 62, z, c, o, f)
+        GLn(cx, cy, 2, 1, -2, 9, 63, z, c, o, f)
+    }
+    //  A cross in a circle (clear).
+    component GCancel(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GArc(cx, cy, 0, 0, 9, 0, 360, 71, z, c, o, f)
+        GLn(cx, cy, -3.5, -3.5, 3.5, 3.5, 72, z, c, o, f)
+        GLn(cx, cy, 3.5, -3.5, -3.5, 3.5, 73, z, c, o, f)
+    }
+    //  An arrow to the right (go).
+    component GArrow(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GLn(cx, cy, -8, 0, 8, 0, 81, z, c, o, f)
+        GLn(cx, cy, 2, -6, 8, 0, 82, z, c, o, f)
+        GLn(cx, cy, 2, 6, 8, 0, 83, z, c, o, f)
+    }
+    //  Three quarters of a ring, turned by `turn` (degrees): something is being done.
+    component GSpinner(cx: number, cy: number, turn: number, z: number, c: color, o: number, f: number) {
+        GArc(cx, cy, 0, 0, 8, turn, turn + 270, 91, z, c, o, f)
+    }
+    //  A note of music.
+    component GNote(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GLn(cx, cy, 3, -9, 3, 5, 101, z, c, o, f)
+        GLn(cx, cy, 3, -9, 8, -6, 102, z, c, o, f)
+        GArc(cx, cy, -1, 5, 4, 0, 360, 103, z, c, o, f)
+    }
+    //  Back to the one before: a bar and a triangle pointing at it (`dir` 1; -1 is the next one, the other way round).
+    component GSkip(cx: number, cy: number, dir: number, z: number, c: color, o: number, f: number) {
+        GLn(cx, cy, -7 * dir, -6, -7 * dir, 6, 111, z, c, o, f)
+        GLn(cx, cy, 6 * dir, -6, -4 * dir, 0, 112, z, c, o, f)
+        GLn(cx, cy, -4 * dir, 0, 6 * dir, 6, 113, z, c, o, f)
+        GLn(cx, cy, 6 * dir, 6, 6 * dir, -6, 114, z, c, o, f)
+    }
+    //  Two bars (pause).
+    component GPause(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GLn(cx, cy, -3.5, -7, -3.5, 7, 121, z, c, o, f)
+        GLn(cx, cy, 3.5, -7, 3.5, 7, 122, z, c, o, f)
+    }
+    //  A triangle pointing right (play).
+    component GPlay(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GLn(cx, cy, -5, -8, 8, 0, 131, z, c, o, f)
+        GLn(cx, cy, 8, 0, -5, 8, 132, z, c, o, f)
+        GLn(cx, cy, -5, 8, -5, -8, 133, z, c, o, f)
+    }
+    //  A crescent moon (sleep).
+    component GMoon(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GArc(cx, cy, 0, 0, 9, 60, 330, 141, z, c, o, f)
+        GArc(cx, cy, 4, -3, 6.5, 85, 265, 142, z, c, o, f)
+    }
+    //  The power sign: a ring broken at the top, and a stroke down into it.
+    component GPower(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GArc(cx, cy, 0, 1, 8.5, 300, 600, 151, z, c, o, f)
+        GLn(cx, cy, 0, -10, 0, -1, 152, z, c, o, f)
+    }
+    //  Caps Lock: a chevron up, over a bar.
+    component GCaps(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GLn(cx, cy, -6, 2, 0, -6, 161, z, c, o, f)
+        GLn(cx, cy, 0, -6, 6, 2, 162, z, c, o, f)
+        GLn(cx, cy, -6, 7, 6, 7, 163, z, c, o, f)
+    }
+    //  Num Lock: a number sign.
+    component GNum(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GLn(cx, cy, -2, -8, -4, 8, 171, z, c, o, f)
+        GLn(cx, cy, 4, -8, 2, 8, 172, z, c, o, f)
+        GLn(cx, cy, -7, -3, 8, -3, 173, z, c, o, f)
+        GLn(cx, cy, -8, 3, 7, 3, 174, z, c, o, f)
+    }
+    //  A keyboard: a box and two rows of keys (the layout).
+    component GKeyboard(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GBox(cx, cy, -10, -6, 10, 6, 181, z, c, o, f)
+        GLn(cx, cy, -6, -2, 6, -2, 185, z, c, o * 0.8, f)
+        GLn(cx, cy, -4, 2, 4, 2, 186, z, c, o * 0.8, f)
+    }
+
+    //  ── the dashboard's and the pickers' ──
+    //  A tick.
+    component GCheck(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GLn(cx, cy, -7, 0, -2, 6, 191, z, c, o, f)
+        GLn(cx, cy, -2, 6, 8, -6, 192, z, c, o, f)
+    }
+    //  A cross (close).
+    component GClose(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GLn(cx, cy, -6, -6, 6, 6, 201, z, c, o, f)
+        GLn(cx, cy, 6, -6, -6, 6, 202, z, c, o, f)
+    }
+    //  An arrow pointing at `ang` degrees (0 right, 90 down, 270 up).
+    component GArrowTo(cx: number, cy: number, ang: number, z: number, c: color, o: number, f: number) {
+        GLn(cx, cy, -8 * cos(ang), -8 * sin(ang), 8 * cos(ang), 8 * sin(ang), 211, z, c, o, f)
+        GLn(cx, cy, 8 * cos(ang), 8 * sin(ang), 8 * cos(ang) + 7 * cos(ang + 140), 8 * sin(ang) + 7 * sin(ang + 140), 212, z, c, o, f)
+        GLn(cx, cy, 8 * cos(ang), 8 * sin(ang), 8 * cos(ang) + 7 * cos(ang - 140), 8 * sin(ang) + 7 * sin(ang - 140), 213, z, c, o, f)
+    }
+    //  A house.
+    component GHome(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GLn(cx, cy, -10, 0, 0, -9, 221, z, c, o, f)
+        GLn(cx, cy, 0, -9, 10, 0, 222, z, c, o, f)
+        GLn(cx, cy, -7, -2, -7, 9, 223, z, c, o, f)
+        GLn(cx, cy, -7, 9, 7, 9, 224, z, c, o, f)
+        GLn(cx, cy, 7, 9, 7, -2, 225, z, c, o, f)
+        GLn(cx, cy, -2, 9, -2, 3, 226, z, c, o * 0.8, f)
+        GLn(cx, cy, 2, 3, 2, 9, 227, z, c, o * 0.8, f)
+    }
+    //  A folder.
+    component GFolder(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GLn(cx, cy, -10, -7, -3, -7, 231, z, c, o, f)
+        GLn(cx, cy, -3, -7, -1, -4, 232, z, c, o, f)
+        GLn(cx, cy, -1, -4, 10, -4, 233, z, c, o, f)
+        GBox(cx, cy, -10, -4, 10, 8, 234, z, c, o, f)
+    }
+    //  A bell; with `off` 1, struck through.
+    component GBell(cx: number, cy: number, off: number, z: number, c: color, o: number, f: number) {
+        GArc(cx, cy, 0, -2, 6, 180, 360, 241, z, c, o, f)
+        GLn(cx, cy, -6, -2, -7, 6, 242, z, c, o, f)
+        GLn(cx, cy, 6, -2, 7, 6, 243, z, c, o, f)
+        GLn(cx, cy, -9, 6, 9, 6, 244, z, c, o, f)
+        GLn(cx, cy, -2, 9, 2, 9, 245, z, c, o, f)
+        GLn(cx, cy, -9, -9, 9, 9, 246, z, c, o * off, f)
+    }
+    //  A heart.
+    component GHeart(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GArc(cx, cy, -4, -3, 4.5, 150, 360, 251, z, c, o, f)
+        GArc(cx, cy, 4, -3, 4.5, 180, 390, 252, z, c, o, f)
+        GLn(cx, cy, -8, -1, 0, 9, 253, z, c, o, f)
+        GLn(cx, cy, 8, -1, 0, 9, 254, z, c, o, f)
+    }
+    //  A mains plug.
+    component GPlug(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GLn(cx, cy, -3, -10, -3, -5, 261, z, c, o, f)
+        GLn(cx, cy, 3, -10, 3, -5, 262, z, c, o, f)
+        GBox(cx, cy, -6, -5, 6, 2, 263, z, c, o, f)
+        GArc(cx, cy, 0, 2, 6, 0, 180, 267, z, c, o, f)
+        GLn(cx, cy, 0, 8, 0, 11, 268, z, c, o, f)
+    }
+    //  A door with an arrow out of it (log out).
+    component GLogout(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GLn(cx, cy, 1, -9, -8, -9, 271, z, c, o, f)
+        GLn(cx, cy, -8, -9, -8, 9, 272, z, c, o, f)
+        GLn(cx, cy, -8, 9, 1, 9, 273, z, c, o, f)
+        GLn(cx, cy, -3, 0, 10, 0, 274, z, c, o, f)
+        GLn(cx, cy, 6, -4, 10, 0, 275, z, c, o, f)
+        GLn(cx, cy, 6, 4, 10, 0, 276, z, c, o, f)
+    }
+    //  A speaker with `w` sound waves (0 to 2); `mute` 1 crosses it out instead.
+    component GSpeaker(cx: number, cy: number, w: number, mute: number, z: number, c: color, o: number, f: number) {
+        GLn(cx, cy, -9, -3, -5, -3, 281, z, c, o, f)
+        GLn(cx, cy, -5, -3, 1, -8, 282, z, c, o, f)
+        GLn(cx, cy, 1, -8, 1, 8, 283, z, c, o, f)
+        GLn(cx, cy, 1, 8, -5, 3, 284, z, c, o, f)
+        GLn(cx, cy, -5, 3, -9, 3, 285, z, c, o, f)
+        GLn(cx, cy, -9, 3, -9, -3, 286, z, c, o, f)
+        GArc(cx, cy, 1, 0, 4, 300, 420, 287, z, c, if(w >= 1 and mute < 0.5, o, 0), f)
+        GArc(cx, cy, 1, 0, 8, 300, 420, 288, z, c, if(w >= 2 and mute < 0.5, o, 0), f)
+        GLn(cx, cy, 4, -4, 10, 4, 289, z, c, o * mute, f)
+        GLn(cx, cy, 10, -4, 4, 4, 290, z, c, o * mute, f)
+    }
+    //  A sun: a ring and eight rays, the rays longer the higher `lv` (0 to 1).
+    component GSun(cx: number, cy: number, lv: number, z: number, c: color, o: number, f: number) {
+        GArc(cx, cy, 0, 0, 4.5, 0, 360, 301, z, c, o, f)
+        repeat k in 0..8 {
+            let an = k * 45
+            GLn(cx, cy, 7 * cos(an), 7 * sin(an), (8.5 + 2.5 * lv) * cos(an), (8.5 + 2.5 * lv) * sin(an), 302 + k, z, c, o, f)
+        }
+    }
+    //  A cloud.
+    component GCloud(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GArc(cx, cy, -4, 1, 4.5, 90, 270, 311, z, c, o, f)
+        GArc(cx, cy, 1, -1, 6, 190, 340, 312, z, c, o, f)
+        GArc(cx, cy, 6, 2, 3.5, 270, 450, 313, z, c, o, f)
+        GLn(cx, cy, -4, 5.5, 6, 5.5, 314, z, c, o, f)
+    }
+    //  The weather, by kind: 0 clear, 1 partly cloudy, 2 cloudy, 3 fog, 4 rain, 5 snow, 6 a storm.
+    component GWeather(cx: number, cy: number, k: number, z: number, c: color, o: number, f: number) {
+        group { show: k == 0; GSun(cx, cy, 0.6, z, c, o, f) }
+        group {
+            show: k == 1
+            GSun(cx - 3 * z, cy - 3 * z, 0.3, z * 0.7, c, o, f)
+            GCloud(cx + 2 * z, cy + 2 * z, z * 0.85, c, o, f)
+        }
+        group { show: k == 2 or k == 4 or k == 5 or k == 6; GCloud(cx, cy - 3 * z, z, c, o, f) }
+        group {
+            show: k == 3
+            GLn(cx, cy, -9, -4, 9, -4, 321, z, c, o, f)
+            GLn(cx, cy, -7, 0, 9, 0, 322, z, c, o, f)
+            GLn(cx, cy, -9, 4, 7, 4, 323, z, c, o, f)
+        }
+        group {
+            show: k == 4
+            GLn(cx, cy, -4, 5, -6, 10, 324, z, c, o, f)
+            GLn(cx, cy, 1, 5, -1, 10, 325, z, c, o, f)
+            GLn(cx, cy, 6, 5, 4, 10, 326, z, c, o, f)
+        }
+        group {
+            show: k == 5
+            GLn(cx, cy, -5, 6, -3, 9, 327, z, c, o, f)
+            GLn(cx, cy, -3, 6, -5, 9, 328, z, c, o, f)
+            GLn(cx, cy, 3, 6, 5, 9, 329, z, c, o, f)
+            GLn(cx, cy, 5, 6, 3, 9, 330, z, c, o, f)
+        }
+        group {
+            show: k == 6
+            GLn(cx, cy, 1, 4, -2, 8, 331, z, c, o, f)
+            GLn(cx, cy, -2, 8, 2, 8, 332, z, c, o, f)
+            GLn(cx, cy, 2, 8, -1, 12, 333, z, c, o, f)
+        }
+    }
+    //  A thermometer.
+    component GThermo(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GLn(cx, cy, -2, -9, -2, 3, 341, z, c, o, f)
+        GLn(cx, cy, 2, -9, 2, 3, 342, z, c, o, f)
+        GArc(cx, cy, 0, -9, 2, 180, 360, 343, z, c, o, f)
+        GArc(cx, cy, 0, 6, 4, 300, 600, 344, z, c, o, f)
+        GLn(cx, cy, 0, -3, 0, 5, 345, z, c, o * 0.8, f)
+    }
+    //  A drop of water.
+    component GDrop(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GLn(cx, cy, 0, -10, -6, 2, 351, z, c, o, f)
+        GLn(cx, cy, 0, -10, 6, 2, 352, z, c, o, f)
+        GArc(cx, cy, 0, 3, 6.2, 345, 555, 353, z, c, o, f)
+    }
+    //  Wind: three strokes, two with a curl at their end.
+    component GWind(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GLn(cx, cy, -9, -4, 5, -4, 361, z, c, o, f)
+        GArc(cx, cy, 5, -6.5, 2.5, 90, 400, 362, z, c, o, f)
+        GLn(cx, cy, -9, 1, 9, 1, 363, z, c, o, f)
+        GLn(cx, cy, -9, 6, 3, 6, 364, z, c, o, f)
+        GArc(cx, cy, 3, 8.5, 2.5, 270, -40, 365, z, c, o, f)
+    }
+    //  A pencil.
+    component GPencil(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GLn(cx, cy, -8, 6, 5, -7, 371, z, c, o, f)
+        GLn(cx, cy, -5, 9, 8, -4, 372, z, c, o, f)
+        GLn(cx, cy, 5, -7, 8, -4, 373, z, c, o, f)
+        GLn(cx, cy, -8, 6, -9, 10, 374, z, c, o, f)
+        GLn(cx, cy, -9, 10, -5, 9, 375, z, c, o, f)
+    }
+    //  A stopwatch (how long it has been up).
+    component GTimer(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GArc(cx, cy, 0, 2, 8, 0, 360, 381, z, c, o, f)
+        GLn(cx, cy, -3, -9, 3, -9, 382, z, c, o, f)
+        GLn(cx, cy, 0, 2, 0, -3, 383, z, c, o, f)
+        GLn(cx, cy, 0, 2, 3, 4, 384, z, c, o, f)
+    }
+    //  A laptop.
+    component GLaptop(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GBox(cx, cy, -8, -7, 8, 4, 391, z, c, o, f)
+        GLn(cx, cy, -11, 7, 11, 7, 395, z, c, o, f)
+    }
+    //  A parcel (the distribution).
+    component GPackage(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GBox(cx, cy, -8, -6, 8, 9, 401, z, c, o, f)
+        GLn(cx, cy, -8, -6, -5, -10, 405, z, c, o, f)
+        GLn(cx, cy, 8, -6, 5, -10, 406, z, c, o, f)
+        GLn(cx, cy, -5, -10, 5, -10, 407, z, c, o, f)
+        GLn(cx, cy, 0, -10, 0, -2, 408, z, c, o * 0.8, f)
+    }
+    //  A chip (the kernel).
+    component GChip(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GBox(cx, cy, -6, -6, 6, 6, 411, z, c, o, f)
+        repeat k in 0..3 {
+            let p = -3 + k * 3
+            GLn(cx, cy, p, -9, p, -6, 415 + k, z, c, o, f)
+            GLn(cx, cy, p, 6, p, 9, 418 + k, z, c, o, f)
+            GLn(cx, cy, -9, p, -6, p, 421 + k, z, c, o, f)
+            GLn(cx, cy, 6, p, 9, p, 424 + k, z, c, o, f)
+        }
+    }
+    //  A network cable's plug.
+    component GEthernet(cx: number, cy: number, z: number, c: color, o: number, f: number) {
+        GBox(cx, cy, -8, -6, 8, 5, 431, z, c, o, f)
+        GLn(cx, cy, -4, 5, -4, 9, 435, z, c, o, f)
+        GLn(cx, cy, 4, 5, 4, 9, 436, z, c, o, f)
+        GLn(cx, cy, -4, 9, 4, 9, 437, z, c, o, f)
+        GLn(cx, cy, -4, -6, -4, -2, 438, z, c, o * 0.8, f)
+        GLn(cx, cy, 0, -6, 0, -2, 439, z, c, o * 0.8, f)
+        GLn(cx, cy, 4, -6, 4, -2, 440, z, c, o * 0.8, f)
+    }
+}
