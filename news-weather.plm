@@ -314,10 +314,11 @@ scene NewsWeather {
                                     size: ns.w - 28 * u, 32 * u
                                     zone box news_sug_z { from: 0, 0; size: ns.w - 28 * u, 32 * u; corner: 8 * u; cursor: pointer; active: s.index * 34 * u - news_dscr >= -6 and s.index * 34 * u - news_dscr < nsd.v - 18; label: "Add {s.name}" }
                                     on press news_sug_z { emit news_mng_pick(s.index) }
-                                    box { from: 0, 0; size: ns.w - 28 * u, 32 * u; corner: 8 * u; color: mint; opacity: 12% * news_sug_z.hover }
+                                    box { from: 0, 0; size: ns.w - 28 * u, 32 * u; corner: 8 * u; color: ink; opacity: 9% * news_sug_z.hover }     // (as the shell's own lists: ink under the pointer, mint for what is on)
                                     text s.name { at: 12 * u, 16 * u; anchor: left center; size: 12.5 * nsf; weight: 700; width: ns.w / 2 - 40 * u; lines: 1; color: nsk1; family: "Space Grotesk" }
                                     text s.sub { at: ns.w - 60 * u, 16 * u; anchor: right center; size: 10.5 * nsf; weight: 500; width: ns.w / 2 - 40 * u; lines: 1; align: right; color: nsk2; family: "Space Grotesk" }
-                                    text "+" { at: ns.w - 42 * u, 15 * u; anchor: center center; size: 15 * nsf; weight: 700; color: mint; opacity: 60% + 40% * news_sug_z.hover; family: "Space Grotesk" }
+                                    GLn(ns.w - 42 * u, 16 * u, -5, 0, 5, 0, 440, 0.9 * gz, mint, 0.6 + 0.4 * news_sug_z.hover, if(news_sug_z.hover > 0.5, fr, 0))
+                                    GLn(ns.w - 42 * u, 16 * u, 0, -5, 0, 5, 441, 0.9 * gz, mint, 0.6 + 0.4 * news_sug_z.hover, if(news_sug_z.hover > 0.5, fr, 0))
                                 }
                             }
                         }
