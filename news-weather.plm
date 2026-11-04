@@ -15,7 +15,7 @@ import "pencil-glyphs.plm"                        // the shell's icons in pencil
 //  the pointer, and holds still on Proxy. One monitor; no notch to carry an unread dot.
 
 scene NewsWeather {
-    surface { size: full, full; anchor: top_left; margin: 0; level: top, overlay while slot_open; screens: each max 4 }
+    surface { size: full, full; anchor: top_left; margin: 0; level: top, overlay while slot_open; screens: each max 4; open: shown > 0.5 }
 
     permissions {
         services: "files", "files.write"
@@ -97,7 +97,7 @@ scene NewsWeather {
     fact news_loading = true                          // from the start: the first thing seen is that it is loading
     fact news_fsz = 1
     prop news_spin = 0
-    spin news_spin by if(news_loading or not wxp_ok, 1, 0)
+    spin news_spin by if(shown > 0.5 and (news_loading or not wxp_ok), 1, 0)     // only while it can be seen: a spin keeps the scene painting
     text news_sub = ""
     text news_hint = ""
     text news_mng_msg = ""
@@ -144,7 +144,11 @@ scene NewsWeather {
     event nw_units_set ->                             // 0 Fahrenheit, 1 Celsius
 
     let u = 1.1
-    let fr = if(shown > 0.5 and look != 5, floor(time * 8), 0)     // the pencil's redrawing (STYLE.md): still while shut, and on Proxy, whose HUD is crisp
+    //  The pencil's clock, running only while the panel shows: naming pleamar's `time` keeps a scene awake for good, about fifty rounds a second
+    //  with the panel shut (pleamar --report: "animating 100%"). Stopped, the scene rests.
+    prop ax_clk = 0
+    spin ax_clk by if(shown > 0.5, 1, 0)
+    let fr = if(shown > 0.5 and look != 5, floor(ax_clk * 8), 0)     // the pencil's redrawing (STYLE.md): still while shut, and on Proxy, whose HUD is crisp
     let gz = u                                        // pencil-glyphs.plm's icons are drawn on a 24-unit square: one unit is `gz` pixels
     let ns.w = max(slot_w, 1)
     let ns.h = max(slot_h, 1)

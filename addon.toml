@@ -5,7 +5,7 @@
 name        = "News & Weather"
 description = "RSS reader and a 48-hour, 16-day forecast, in one drawer"
 author      = "jaslrobinson"
-version     = "0.2"
+version     = "0.3"
 vitreus_api = 1
 repo        = "jaslrobinson/vitreus-news-weather"
 scene       = "news-weather.plm"

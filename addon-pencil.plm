@@ -4,7 +4,7 @@ language 0.1
 //
 //  What it expects of the scene that imports it (it reads them as the scene's own names, like the palette's colours):
 //    let u = 1.1                                              // the panel's unit: size every length as N * u
-//    let fr = if(shown > 0.5, floor(time * 8), 0)             // which redrawing of the lines this is: the pencil rests while the panel is shut
+//    let fr = if(shown > 0.5, floor(ax_clk * 8), 0)             // which redrawing of the lines this is: the pencil rests while the panel is shut
 //  A component takes `f` (the frame its lines are drawn on): leave it out and they redraw about eight times a second; pass `0` and they rest, still crooked. The shell's rule,
 //  and ours: a piece of drawing rests unless it is on or under the pointer (`f: if(on or hover, fr, 0)`).
 //
