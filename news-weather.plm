@@ -64,7 +64,9 @@ scene NewsWeather {
     fact slot_h = 0
     fact slot_sw = 0                                  // the size of the monitor the panel is on: the scene has a copy on each (`screens: each`, numbered in its own order) and only the copy of that size draws (0: not told yet, every copy does)
     fact slot_sh = 0
-    let shown = if(slot_open and (slot_sw == 0 or (screen.width == slot_sw and screen.height == slot_sh)), 1, 0)
+    let onmon = slot_sw == 0 or (screen.width == slot_sw and screen.height == slot_sh)       // this copy is on the panel's monitor (still told while it shuts)
+    let here = if(slot_open and onmon, 1, 0)       // 1 on the copy on the panel's monitor, while the panel is out
+    let shown = if(onmon and (slot_open or en1 > 0.004), 1, 0)       // what is drawn: as `here`, and on after it while the content fades out with the glass (the window stays until it has)
 
     spring slide = 220, 24                            // the tab thumb: quick, with a hint of overshoot
 
@@ -73,9 +75,19 @@ scene NewsWeather {
     prop wk = 0 ~700ms                                // (moves while the content waits to arrive, so the scene keeps drawing frames: it draws none while shut)
     prop en1 = 0 ~200ms
     prop en2 = 0 ~380ms
-    on change shown while shown > 0.5 { wk: 1; en1: 1 after 200ms; en2: 1 after 200ms }
-    on change shown while shown < 0.5 { wk: 0 ~80ms; en1: 0 ~80ms; en2: 0 ~80ms; en1: 0 ~80ms after 205ms; en2: 0 ~80ms after 205ms }
-    every 500ms while shown > 0.5 and en1 < 0.002 { en1: 1 after 200ms; en2: 1 after 200ms }     // (a scene that starts, or is saved, with its panel already out has no change to wait for)
+    on change here while here > 0.5 { wk: 1; en1: 1 after 200ms; en2: 1 after 200ms }
+    on change here while here < 0.5 { wk: 0 ~80ms; en1: 0 ~80ms; en2: 0 ~80ms; en1: 0 ~80ms after 205ms; en2: 0 ~80ms after 205ms }
+    every 500ms while here > 0.5 and en1 < 0.002 { en1: 1 after 200ms; en2: 1 after 200ms }     // (a scene that starts, or is saved, with its panel already out has no change to wait for)
+    //  Where the content is: it glides to `slot_x`, `slot_y` on the glass's own spring (Vitreus's `ax_sp`), so it moves with the panel as it is pulled, and is put
+    //  there at once while it is not drawn yet (the panel opening, or a resize).
+    spring ax_sp = 300, 20
+    prop slx = 0 ~ax_sp
+    prop sly = 0 ~ax_sp
+    on change slot_x { slx: slot_x }
+    on change slot_y { sly: slot_y }
+    on change slot_x while en1 < 0.01 { slx: slot_x ~0ms }
+    on change slot_y while en1 < 0.01 { sly: slot_y ~0ms }
+    every 500ms while here > 0.5 and en1 < 0.01 { slx: slot_x ~0ms; sly: slot_y ~0ms }
 
     //  What the logic says (news-weather.luau)
     fact news_tab = 0                                 // 0 News, 1 Weather
@@ -160,7 +172,7 @@ scene NewsWeather {
     group {
         show: shown > 0.5
         group {
-            move: slot_x - ns.w / 2, slot_y - ns.h / 2
+            move: slx - ns.w / 2, sly - ns.h / 2
             group {
                 opacity: en1
                 move: 0, (1 - en1) * 12 * u
