@@ -690,6 +690,19 @@ on("field_esc", function()
     end
 end)
 
+-- Which copy of this scene is on the panel's monitor: the one whose `screen.K.name` is the name the shell sent (`slot_mon`). None matching: the scene falls back to the monitor's size.
+local function find_monitor()
+    local name = text.slot_mon or ""
+    local any = false
+    for k = 0, 3 do
+        local here = name ~= "" and text["screen." .. k .. ".name"] == name
+        if fact["mon_c" .. k] ~= here then fact["mon_c" .. k] = here end
+        any = any or here
+    end
+    if fact.mon_known ~= any then fact.mon_known = any end
+end
+on("fact:slot_open", function() find_monitor() end)
+
 -- an open drawer with an old forecast asks for a new one
 on("fact:slot_open", function(v)
     if v == true and DATA and os.time() - wx_at > 600 then refresh_weather() end
