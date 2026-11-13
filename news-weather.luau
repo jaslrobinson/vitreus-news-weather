@@ -231,6 +231,24 @@ local function say_shell(cmds)
     for _, c in ipairs(cmds) do args[#args + 1] = c end
     run("pleamar", args, function() end)
 end
+-- Which copy of this scene is on the panel's monitor: the one whose `screen.K.name` is the name the shell sent (`slot_mon`), as in the
+-- template and every add-on that ships with Vitreus. The monitor's size decided before, and an exact match on it is lost whenever the
+-- display's scale or resolution changes, or when the size arrives before it has settled: then no copy matches, the content never fades
+-- in, and the panel stands empty with only the glass the shell draws. Vitreus's logic/addons.luau:72-73 and :87-88 work around the
+-- same failure from the shell's side.
+local function find_monitor()
+    local name = text.slot_mon or ""
+    local any = false
+    for k = 0, 3 do
+        local here = name ~= "" and text["screen." .. k .. ".name"] == name
+        if fact["mon_c" .. k] ~= here then fact["mon_c" .. k] = here end
+        any = any or here
+    end
+    if fact.mon_known ~= any then fact.mon_known = any end
+end
+on("fact:slot_open", function() find_monitor() end)      -- (the shell says it again every two seconds while the panel is out, and `slot_mon` before it)
+on("text:slot_mon", function() find_monitor() end)
+
 local function place_field()
     local l, t, r = 22, 110, 50                    -- (the right end leaves room for the "…" shown while a feed is looked up)
     if field == "place" then l, t, r = 30, 97, 30 end
